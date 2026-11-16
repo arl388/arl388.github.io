@@ -89,6 +89,17 @@
   .ufo { position: fixed; top: 64px; left: 0; width: 50px; z-index: 2; pointer-events: none; opacity: 0; color: var(--acc); animation: fly 52s linear 1s infinite; }
   @keyframes fly { 0% { transform: translate(-80px, 0); opacity: 0; } 3% { opacity: .85; } 50% { transform: translate(55vw, 12px); } 97% { opacity: .85; } 100% { transform: translate(110vw, -4px); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .ufo { display: none; } h1 .cur { animation: none; } .frame.scan::after { animation: none; } }
+
+  /* easter egg: type "beam me up" */
+  .beam { position: fixed; inset: 0; z-index: 50; pointer-events: none; overflow: hidden; }
+  .beam .ray { position: absolute; width: 56px; margin-left: -28px; opacity: 0; clip-path: polygon(34% 0, 66% 0, 100% 100%, 0 100%);
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--acc) 38%, transparent), transparent 92%); animation: ray 3s ease-in-out forwards; }
+  .beam .al { position: absolute; width: 30px; margin-left: -15px; margin-top: -30px; color: var(--acc); opacity: 0; animation: lift 2.6s cubic-bezier(.5, 0, .8, .6) forwards; }
+  @keyframes ray { 0% { opacity: 0; } 18% { opacity: 1; } 70% { opacity: .9; } 100% { opacity: 0; } }
+  @keyframes lift { 0% { opacity: 0; transform: translateY(0) rotate(-4deg); } 12% { opacity: 1; } 35% { transform: translateY(calc(var(--rise) * -.12)) rotate(5deg); }
+    70% { opacity: 1; transform: translateY(calc(var(--rise) * -.6)) rotate(-4deg); } 100% { opacity: 0; transform: translateY(calc(var(--rise) * -1)) rotate(3deg); } }
+  .beam.calm .al { animation: calm 2.6s ease-in-out forwards; }
+  @keyframes calm { 0%, 100% { opacity: 0; } 30%, 70% { opacity: 1; } }
 </style>
 </head>
 <body>
@@ -213,6 +224,39 @@
     try { navigator.clipboard.writeText(el.textContent).then(done, fb); } catch (e) { fb(); }
   });
 })();
+
+  /* easter egg: typing "beam me up" sends a few small aliens up a beam of light */
+  (function () {
+    var phrase = "beam me up", buf = "", busy = false;
+    var svg = '<svg viewBox="0 0 30 34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">' +
+      '<path d="M15 3 C6 3 3 11 5 17 C7 22 11 25 15 25 C19 25 23 22 25 17 C27 11 24 3 15 3 Z"/>' +
+      '<path d="M15 25 V30 M10 32 L15 30 L20 32"/>' +
+      '<ellipse cx="10.5" cy="13" rx="3" ry="4.4" fill="currentColor" transform="rotate(18 10.5 13)"/>' +
+      '<ellipse cx="19.5" cy="13" rx="3" ry="4.4" fill="currentColor" transform="rotate(-18 19.5 13)"/></svg>';
+    function beam() {
+      if (busy) return; busy = true;
+      var calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches, H = window.innerHeight, W = window.innerWidth;
+      var wrap = document.createElement("div"); wrap.className = "beam" + (calm ? " calm" : ""); wrap.setAttribute("aria-hidden", "true");
+      var n = W < 600 ? 5 : 8;
+      for (var i = 0; i < n; i++) {
+        var x = (6 + Math.random() * 88) / 100 * W, y = (.5 + Math.random() * .35) * H, d = Math.round(Math.random() * 900);
+        var ray = document.createElement("div"); ray.className = "ray";
+        ray.style.cssText = "left:" + x + "px;top:" + y + "px;height:" + (H - y) + "px;animation-delay:" + d + "ms";
+        var al = document.createElement("div"); al.className = "al"; al.innerHTML = svg;
+        al.style.cssText = "left:" + x + "px;top:" + y + "px;--rise:" + (y + 70) + "px;animation-delay:" + d + "ms";
+        if (!calm) wrap.appendChild(ray); wrap.appendChild(al);
+      }
+      document.body.appendChild(wrap);
+      setTimeout(function () { wrap.remove(); busy = false; }, 4800);
+    }
+    document.addEventListener("keydown", function (e) {
+      var t = e.target, tag = t && t.tagName;
+      if (e.metaKey || e.ctrlKey || e.altKey || tag === "INPUT" || tag === "TEXTAREA" || (t && t.isContentEditable)) return;
+      if (e.key.length !== 1) return;
+      buf = (buf + e.key.toLowerCase()).slice(-phrase.length);
+      if (buf === phrase) { buf = ""; beam(); }
+    });
+  })();
 </script>
 </body>
 </html>
