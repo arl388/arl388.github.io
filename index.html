@@ -183,8 +183,8 @@
   });
 
 
-  /* "send a brief" opens a short form. A page like this can't send mail on its own, so the form builds the email
-     (opens the visitor's mail app, addressed to Alexandra) and offers a copy-as-text fallback. */
+/* "send a brief" opens a short form. It posts to a Formspree form that emails Alexandra; if that fails, it falls back
+     to opening the visitor's mail app, and offers a copy-as-text option. */
   var TO = "alexandraronelang@gmail.com", bb = document.getElementById("briefBtn"), bf = document.getElementById("briefForm"), note = document.getElementById("fNote");
   bb.addEventListener("click", function () {
     var open = bf.hasAttribute("hidden");
@@ -204,10 +204,19 @@
       el.classList.toggle("bad", bad); if (bad) ok = false;
     });
     if (!ok) { note.textContent = "Please fill in your name, a valid email and the assignment."; return; }
-    var b = brief(), a = document.createElement("a");
-    a.href = "mailto:" + TO + "?subject=" + encodeURIComponent(b.subject) + "&body=" + encodeURIComponent(b.body);
-    a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
-    note.textContent = "Opening your email app. If nothing opened, use “copy as text” and send it to " + TO + ".";
+    var b = brief(), btn = bf.querySelector('button[type="submit"]'), v = function (id) { return document.getElementById(id).value.trim(); };
+    function fallback() {
+      var a = document.createElement("a");
+      a.href = "mailto:" + TO + "?subject=" + encodeURIComponent(b.subject) + "&body=" + encodeURIComponent(b.body);
+      a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
+      note.textContent = "Couldn't send from here. Opening your email app instead; if nothing opened, use “copy as text” and send it to " + TO + ".";
+    }
+    btn.disabled = true; note.textContent = "Transmitting…";
+    fetch("https://formspree.io/f/xbgogawl", {
+      method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ name: v("fName"), email: v("fEmail"), assignment: v("fWhat"), deadline: v("fWhen") || "-", budget: v("fBudget") || "-", _subject: b.subject })
+    }).then(function (r) { if (!r.ok) throw new Error("send failed"); bf.reset(); note.textContent = "Sent. I'll reply by email soon."; })
+      .catch(fallback).then(function () { btn.disabled = false; });
   });
   document.getElementById("fCopy").addEventListener("click", function () {
     var b = brief(), text = "To: " + TO + "\nSubject: " + b.subject + "\n\n" + b.body;
